@@ -19,21 +19,20 @@ users:
     name: Osama Mustafa
     sudo: yes
     ssh_key: |
-      ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAAE27OJNcnUgKIiUBxGKvAULnvnAzNXsHRZSkT7qslupqKiv/xulvRhYqfuPd58dvc2M+DFVH1XK9ME3GUPQyVy3gFTztaSuJYVDSQFOmi+5RUGPYfvWiqbVCsPxZOdnwP1Wh4tuH+9xF5FRGMlVngi3DgP+Wq/g/8xiu8J78V5NwEfkw== 
-      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIID09ssnrJZzSx4T6HN4xzfOMiv8O6qxmtwGD7Dnal/g 
+       Your-key
   Test:
     name: Test User
     sudo: yes
     ssh_key: |
-      ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDAD4aY0V1lnnVWd6+PGUFvLBkgTp1p3JOIXoWA1kZyqoWqqgZDKwJTTWG8/N2LJuzWTXvpZ+UHE9+8gXS7jkZ3oSeBYXgvdyWWNk63aEZxfpuWHUgtex287oyqFLpRK69HhoDfUATpATTEvn+QX7+Jg1ACU+agC1lokAtzB3layaqeznHtRPB1R87eljz2R5sHVMj40hg9CmAft+K1em40XyK5DxHA/fPhnVNSCw9sxr8kzO59EXdeqqGw/vCZSvEBZzXVvVDgOcQuNK0JSH3xmOmDauOt9ux62q+PaYtSaBjgbWRv1wbXkTHTAgaBf6OoqGZBnHcs0+BZFd1qJ2R5 
+      Your-key
   Ubuntu:
     name: Ubuntu user
     sudo: yes
     ssh_key: |
-      ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDJYADH3ZrcIePzob/SvFUuAlFUhjE7h8wvbrft+EAAiNECi28yd+KzZBGo/5E+jez/yGtNyeZ8lSeNKncWm6Uu5w5d/YcFhaQVS1n59/AshUxn0Wgd0B3M11i7su+tj6aosBJ9uvl+o+sLD9PFPIxrGn/QGURxjTITkwNFXQ2Z+vCgpsDZkLRkpFH4jKMWwzQhCTI0SacjE/sVSseA3j8Hvcf5MvyW0UNUtN/hzX8JlcyO6weDAATeh2XYTxcvoHXrrv8mFFWpFj+AwUt0IBx87jNC2NB24ZQCBi/Pbb6HWGnzkRi9MlkZzDHpmVdHh7hTKyvogxAaU0NGQMgJqNMjQSPfVOzan/17KhxCIoVApokIERHC1f+8zvkknPRtrxJn3F1xCTal7RA0QjM8NqJbP63tAIUUPF2HGtaFSCh6Blx+2vJtkUh2TIwF8hH/ZKRmROZCXF2qA0yQRJLhOa+34/0tMyjVf0In8CDnpiKRfPr1lg2Sf3ME+UdkepHFzo9m/Zypjy0PwzN4CLQCNEJA80koyw806IzDfquCCoK8iPL2vOmxbcboLuju3xBshCaH0unYLwSBY0TlJpw0+mbwdYljUtBCMQcID9q14zrsEpn1/UAdIozy4ujXtm3QVjNkvjmpveBxwFNRCSalw3ftYwLr9PACHjYr+MXdMKW+vQ== 
+      Your-key
   Osama2:
     name: Osama Osama
     sudo: yes
     ssh_key: |
-      ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4WOk0vi1QbdCuX4pK1mh2iz723f5paqcVEV6TLcZJk+yJQflemE+6aeR/JaxotRjUADnfhNnG3ZY0AUXdoXduaIbvUk69Vr/QhtOXB/+XCbfEa2yoQfku0jb6KrXZBONdOxD+1DHjF7OIaSAOCJ58U2nvkGB4iqhTyPi7QCwiiYiu2xkrNluFQVOcR5YtCyQIgn4VNlVSWaP6MpokUKy7AIjl1Fl4qVXsWdvv6OwHs9FSA5ZFG9KtqZSC73sFtQV0LotVdFcs1NiB4zRkLEGfC/DRdrJfTut3vyZmWIkduRH0iIKndPzKR76sgiNCl6wNMMmTWSy92DxPN4PwP5+H 
+      Your-key
  
