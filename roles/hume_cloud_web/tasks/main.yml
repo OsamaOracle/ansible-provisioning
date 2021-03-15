@@ -1,0 +1,43 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/hume_cloud_web
+    state: directory
+    mode: 0755
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/hume_cloud_web/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: create ldap ldif file
+  template:
+    src: ga.ldif
+    dest: /docker/hume_cloud_web/ga.ldif
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/hume_cloud_web/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- debug:
+    var: run_service_result

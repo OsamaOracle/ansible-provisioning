@@ -1,0 +1,12 @@
+version: '3.7'
+services:
+  pritunl:
+    hostname: pritunl
+    image: jippi/pritunl:{{ pritunl_version }}
+    volumes:
+    - /docker/pritunl/data/mongodb:/var/lib/mongodb
+    - /docker/pritunl/data/pritunl:/var/lib/pritunl
+    - /docker/pritunl/data/pritunl.conf:/etc/pritunl.conf
+    network_mode: host
+    restart: unless-stopped
+    privileged: true

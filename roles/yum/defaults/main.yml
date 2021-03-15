@@ -1,0 +1,3 @@
+---
+
+yum__remove_unmanaged_repositories: false

@@ -1,0 +1,101 @@
+version: "3.7"
+services:
+  blobstore:
+    # minio is only necessary if you don't want to use S3 buckets and keep the data on a local server while taking advantage of an AWS client
+    image: docker..com/internal/hume-blobstorage:1.17.1-RELEASE
+    restart: always
+    environment:
+      - MINIO_ACCESS_KEY=hume
+      - MINIO_SECRET_KEY=hume111222333
+    volumes:
+      # Mount a local volume on disk against the /data volume of the minio container
+      - /datadisk/minio/data:/data
+    command: "server /data"
+    ports:
+      - 9000:9000
+  orchestra:
+    image: docker..com/internal/hume-orchestra:{{hume_version}}
+    ports:
+      - 8100:8100
+    volumes:
+      - /datadisk/minio/data:/data
+    environment:
+      - "JAVA_OPTS=-Xmx4g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+    restart: always
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    ports:
+      - "5432:5432"
+    volumes:
+      - /datadisk/data/postgres/data:/var/lib/postgresql/data
+  neo4j:
+    image: neo4j:4.0.6-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/{{hume_cloud_web_neo4j_password}}
+      - NEO4J_dbms_memory_heap_maxSize=8G
+      - NEO4J_dbms_connector_bolt_advertised__address=testgame.hume..com:7687
+      - NEO4JLABS_PLUGINS=["apoc","graph-data-science"]
+      - NEO4J_dbms_tx__log_rotation_retention__policy=10M size
+    volumes:
+      - /datadisk/data/neo4j4/data/neo4j-data:/data
+      - /datadisk/data/neo4j4/plugins:/plugins
+      - /datadisk/data/neo4j4/logs:/var/lib/neo4j/logs
+      - /datadisk/minio/data/neo4j-import:/var/lib/neo4j/import
+  api:
+    image: docker..com/internal/hume-api:{{hume_version}}
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - HUME_NLP_ENGINE_ENABLED=true
+      - HUME_GATEWAY_URI=https://gateway.dev.hume..com
+      - HUME_NLP_ENGINE_DRIVER=feign
+      - HUME_BLOBSTORE_ADAPTER=minio
+      - HUME_BLOBSTORE_ADAPTER_S3_IDENTITY=hume
+      - HUME_BLOBSTORE_ADAPTER_S3_CREDENTIAL=hume111222333
+      - "HUME_BLOBSTORE_ADAPTER_S3_HOST=http://blobstore:9000"
+      - HUME_BLOBSTORE_CONTAINER=-hume-test
+      - HUME_KG_NLP_ENABLED=true
+      - EUREKA_URI=https://discovery.dev.hume..com/eureka
+      - feign.client.config.default.connectTimeout=160000000
+      - feign.client.config.default.readTimeout=160000000
+      - hume.orchestra.uri=http://orchestra:8100
+      - hume.security.rbac.enabled=true
+      - hume.orchestra.experimental.enabled=true
+      - hume.security.provider=keycloak
+      - keycloak.auth-server-url=https://id.dev.hume..com/auth
+      - keycloak.realm=hume
+      - keycloak.resource=hume-testgame-web
+      - keycloak.public-client=true
+      - keycloak.principal-attribute=preferred_username
+      - keycloak.use-resource-role-mappings=true
+      - keycloak.enabled=true
+      - hume.security.audit.enabled=true
+      - hume.security.audit.log.path=/audit/hume_audit.log
+    volumes:
+      - /datadisk/data/audit:/audit
+    depends_on:
+      - postgres
+  web:
+    image: docker..com/public/hume-web:{{hume_version}}
+    restart: always
+    environment:
+      - HUME_API_URL=https://api.testgame.hume..com
+      - KEYCLOAK_ENABLED=true
+      - KEYCLOAK_URL=https://id.dev.hume..com/auth/
+      - KEYCLOAK_REALM=hume
+      - KEYCLOAK_CLIENT=hume-testgame-web
+networks:
+  default:
+    external:
+      name: reverse_proxy

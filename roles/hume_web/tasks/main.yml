@@ -1,0 +1,26 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/hume_web
+    state: directory
+    mode: 0755
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/hume_web/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- docker_compose:
+    project_src: /docker/hume_web/
+    pull: yes

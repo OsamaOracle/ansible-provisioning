@@ -1,0 +1,43 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/ci-cd-example
+    state: directory
+    mode: 0755
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/ci-cd-example/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/ci-cd-example/
+    pull: yes
+  register: run_service_result
+
+#- debug: var=run_service_result
+
+- name: set local ip address to services
+  set_fact:
+    service_container_ip:
+      service: "{{ run_service_result.services['ci-cd-example']['ci-cd-example_ci-cd-example_1'].networks.reverse_proxy.IPAddress }}"
+
+- name: register to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "{{ ci_cd_example_env }}.ci-cd-example.az..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.service }}:8080"

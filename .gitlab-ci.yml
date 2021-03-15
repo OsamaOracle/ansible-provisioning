@@ -1,0 +1,40 @@
+stages:
+- provision
+- notify
+
+
+ansible-dry-run:
+  stage: provision
+  tags:
+  - graphaware
+  image: docker.graphaware.com/internal/ansible
+  before_script:
+  - chmod -R ou-w .
+  - mkdir ~/.ssh
+  - echo "$ANSIBLE_PRIVATE_SSH_KEY" > ~/.ssh/id_rsa
+  - chmod -R og-rwx ~/.ssh
+  - echo "$ANSIBLE_VAULT_PASSWORD_B64" | base64 -d > ~/graphaware_vault_password.txt
+  - export ANSIBLE_VAULT_PASSWORD_FILE=~/graphaware_vault_password.txt
+  script:
+  - "echo ANSIBLE_EXTRA: $ANSIBLE_EXTRA"
+  - eval "ansible-playbook playbook.yml --diff $ANSIBLE_EXTRA --check"
+  except:
+  - master
+
+ansible-run:
+  stage: provision
+  tags:
+  - graphaware
+  image: docker.graphaware.com/internal/ansible
+  before_script:
+  - chmod -R ou-w .
+  - mkdir ~/.ssh
+  - echo "$ANSIBLE_PRIVATE_SSH_KEY" > ~/.ssh/id_rsa
+  - chmod -R og-rwx ~/.ssh
+  - echo "$ANSIBLE_VAULT_PASSWORD_B64" | base64 -d > ~/graphaware_vault_password.txt
+  - export ANSIBLE_VAULT_PASSWORD_FILE=~/graphaware_vault_password.txt
+  script:
+  - "echo ANSIBLE_EXTRA: $ANSIBLE_EXTRA"
+  - eval "ansible-playbook playbook.yml --diff $ANSIBLE_EXTRA"
+  only:
+  - master

@@ -1,0 +1,83 @@
+---
+
+- name: Ensure filesystem exists on mount point for minio server data
+  filesystem:
+    fstype: ext4
+    dev: "{{ minio_disk_dev }}"
+
+- name: create /minio directory
+  file:
+    path: /minio
+    state: directory
+    mode: 0755
+
+- name: Mount Minio Data volume
+  mount:
+    path: /minio
+    src: "{{ minio_disk_dev }}"
+    fstype: ext4
+    state: mounted
+
+- name: create role docker directory
+  file:
+    path: /docker/kg_cloud
+    state: directory
+    mode: 0755
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/kg_cloud/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/kg_cloud/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- debug:
+    var: run_service_result
+
+- name: set local ip address to services
+  set_fact:
+    service_container_ip:
+      frontend: "{{ run_service_result.services['web']['kg_cloud_web_1'].networks.reverse_proxy.IPAddress }}"
+      backend: "{{ run_service_result.services['api']['kg_cloud_api_1'].networks.reverse_proxy.IPAddress }}"
+
+- name: register frontend to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "kg.demo..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.frontend }}"
+
+- name: register api to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "api.kg.demo..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.backend }}:8080"
+
+- name: register minio to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: minio.kg.demo..com
+    endpoints:
+      "/": "http://{{ run_service_result.services['minio']['kg_cloud_minio_1'].networks.reverse_proxy.IPAddress }}:9000"

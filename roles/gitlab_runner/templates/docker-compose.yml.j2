@@ -1,0 +1,8 @@
+gitlab_runner:
+  restart: always
+  image: gitlab/gitlab-runner
+  environment:
+    NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+  volumes:
+    - /docker/gitlab_runner/config:/etc/gitlab-runner
+    - /var/run/docker.sock:/var/run/docker.sock

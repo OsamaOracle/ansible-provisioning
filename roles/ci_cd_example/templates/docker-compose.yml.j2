@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  ci-cd-example:
+    restart: always
+    image: docker.repo.com/internal/ci-cd-example
+    ports:
+      - 8080:8080
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_PASSWORD: "{{ neo4j_password }}"
+    networks:
+      - reverse_proxy
+      - neo4j
+
+networks:
+  reverse_proxy:
+      external:
+        name: reverse_proxy
+  neo4j:
+    name: neo4j

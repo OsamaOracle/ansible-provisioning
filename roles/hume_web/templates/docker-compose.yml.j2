@@ -1,0 +1,54 @@
+version: '3.7'
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    ports:
+      - 5432:5432
+  neo4j:
+    image: docker..com/internal/hume-neo4j-server:{{hume_web_hume_neo4j_server_tag}}
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/pass
+      - NEO4J_dbms_memory_heap_maxSize=2G
+  nlpengine:
+    image: docker..com/internal/hume-nlp-engine:{{hume_web_hume_nlp_engine_tag}}
+    environment:
+      - SERVER_PORT=8085
+    expose:
+      - "8085"
+    ports:
+      - "8070:8085"
+  api:
+    image: docker..com/internal/hume-api:{{hume_web_hume_api_tag}}
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - NEO4J_HOST=95.179.176.99
+      - NEO4J_PASSWORD=error666
+      - NEO4J_PORT=3687
+      - HUME_NLP_ENGINE_ENABLED=true
+      - HUME_NLP_ENGINE_DRIVER=http
+      - HUME_NLP_ENGINE_DRIVER_HTTP_HOST=http://nlpengine:8085
+      - HUME_BLOBSTORE_ADAPTER=s3
+      - HUME_BLOBSTORE_CONTAINER=-hume-test
+      - HUME_BLOBSTORE_ADAPTER_S3_IDENTITY={{hume_web_aws_identity}}
+      - HUME_BLOBSTORE_ADAPTER_S3_CREDENTIAL={{hume_web_aws_credential}}
+      - HUME_KG_NLP_ENABLED=true
+      - HUME_KG_NLP_HOST=http://nlpengine:8085
+      - ENRICHER_WIKIDATA_ENABLED={{hume_web_hume_api_wikidata_enricher_enabled}}
+  web:
+    image: docker..com/internal/hume-web:{{hume_web_hume_web_tag}}
+    environment:
+      - HUME_API_URL=http://{{ansible_host}}:8080
+    ports:
+      - "8081:80"

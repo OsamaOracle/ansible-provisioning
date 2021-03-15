@@ -1,0 +1,15 @@
+---
+
+epel_yum_repositories__to_merge:
+- name: epel
+  description: Extra Packages for Enterprise Linux 7 - $basearch
+  baseurl: http://download.fedoraproject.org/pub/epel/7/$basearch
+  gpgcheck: true
+  gpgkey: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+
+docker_yum_repositories__to_merge:
+- name: docker-ce-stable
+  description: Docker CE Stable - $basearch
+  baseurl: https://download.docker.com/linux/centos/7/$basearch/stable
+  gpgcheck: true
+  gpgkey: https://download.docker.com/linux/centos/gpg

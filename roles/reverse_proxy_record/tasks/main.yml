@@ -1,0 +1,54 @@
+---
+
+- stat:
+    path: /docker/reverse_proxy/certbot/conf/live/{{ server_name }}/fullchain.pem
+  register: initial_cert_stat
+
+- set_fact:
+    is_proxy_config_updated: false
+
+- name: generate certificate
+  docker_container:
+    name: certbot-generate
+    detach: no
+    cleanup: yes
+    image: certbot/certbot
+    entrypoint: certbot certonly --webroot -w /var/www/certbot --email test@gmail.com -d {{ server_name }} --rsa-key-size 4096 -n --agree-tos
+    volumes:
+      - /docker/reverse_proxy/certbot/conf:/etc/letsencrypt
+      - /docker/reverse_proxy/certbot/www:/var/www/certbot
+  when: not initial_cert_stat.stat.exists
+  register: generate_certificate_result
+
+- debug:
+    var: generate_certificate_result.container.Output
+  when: not initial_cert_stat.stat.exists
+
+- set_fact:
+    is_proxy_config_updated: "{{ is_proxy_config_updated or generate_certificate_result.changed }}"
+  when: not initial_cert_stat.stat.exists
+
+- stat:
+    path: /docker/reverse_proxy/certbot/conf/live/{{ server_name }}/fullchain.pem
+  register: post_creation_cert_stat
+
+- name: create site config file
+  template:
+    src: site.conf.j2
+    dest: /docker/reverse_proxy/nginx.conf.d/{{ server_name }}.conf
+    mode: 0660
+    owner: root
+    group: wheel
+  when: post_creation_cert_stat.stat.exists
+  register: create_config_result
+
+- set_fact:
+    is_proxy_config_updated: "{{ is_proxy_config_updated or create_config_result.changed }}"
+  when: post_creation_cert_stat.stat.exists
+
+- name: restart proxy server
+  docker_compose:
+    project_src: /docker/reverse_proxy/
+    pull: yes
+    restarted: "{{ is_proxy_config_updated }}"
+

@@ -1,0 +1,61 @@
+---
+
+- name: Uninstall
+  yum:
+    name:
+      - python2-requests
+    state: absent
+    update_cache: yes
+
+- name: Install
+  yum:
+    name:
+      - "{{ docker_package }}"
+      - python-devel
+      - "@Development tools"
+    state: present
+    update_cache: yes
+
+- name: Ensure Docker is started and enabled at boot.
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Ensure ip forwarding is enabled
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    state: present
+    reload: yes
+
+- name: Increase nofile limits
+  pam_limits:
+    domain: '*'
+    limit_type: '-'
+    limit_item: nofile
+    value: "102400"
+
+- name: Cron job to clean-up docker objects
+  cron:
+    name: clean-up docker objects
+    minute: "18"
+    hour: "*/6"
+    job: docker system prune -af --volumes
+
+- name: Update sshd
+  yum:
+    name: openssh-server
+    state: latest
+
+- name: create /docker directory
+  file:
+    path: /docker
+    state: directory
+    mode: 0755
+
+- name: install docker-compose
+  pip:
+    name:
+    - docker
+    - docker-compose

@@ -1,0 +1,135 @@
+version: "3.7"
+services:
+  postgres2:
+      image: postgres:12.0
+      volumes:
+         - /datadisk/data/postgres2:/var/lib/postgresql/data
+      environment:
+        POSTGRES_DB: keycloak
+        POSTGRES_USER: keycloak
+        POSTGRES_PASSWORD: password
+      command: -p 5433
+      expose:
+        - "5433" # Publishes 5433 to other containers but NOT to host machine
+  keycloak:
+      image: quay.io/keycloak/keycloak:9.0.3
+      environment:
+        - DB_VENDOR=POSTGRES
+        - DB_ADDR=postgres2
+        - DB_PORT=5433
+        - DB_DATABASE=keycloak
+        - DB_USER=keycloak
+        - DB_SCHEMA=public
+        - DB_PASSWORD=password
+        - KEYCLOAK_USER=admin
+        - KEYCLOAK_PASSWORD={{hume_cloud_web_keycloak_password}}
+        - PROXY_ADDRESS_FORWARDING=true
+      ports:
+        - 8090:8080
+      depends_on:
+        - postgres2
+  blobstore:
+    image: docker..com/internal/hume-blobstorage:{{hume_version}}
+    restart: always
+    environment:
+      - MINIO_ACCESS_KEY=hume
+      - MINIO_SECRET_KEY=hume111222333
+    volumes:
+      # Mount a local volume on disk against the /data volume of the minio container
+      - /datadisk/minio/data:/data
+    command: "server /data"
+    ports:
+      - 9000:9000
+  orchestra:
+    image: docker..com/internal/hume-orchestra:{{hume_version}}
+    ports:
+      - 8100:8100
+    volumes:
+      - /datadisk/minio/data:/data
+      - /datadisk/buckets:/buckets
+    environment:
+      - "JAVA_OPTS=-Xmx4g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+    restart: always
+  postgres:
+    image: postgres:12.0
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    ports:
+      - "5432:5432"
+    volumes:
+      - /datadisk/data/postgres/data:/var/lib/postgresql/data
+  neo4j:
+    image: neo4j:4.0.7-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/{{hume_cloud_web_neo4j_password}}
+      - NEO4J_dbms_memory_heap_maxSize=8G
+      - NEO4J_dbms_connector_bolt_advertised__address=hume-prod-001.aws..com:7687
+      - NEO4JLABS_PLUGINS=["apoc","graph-data-science"]
+      - NEO4J_dbms_tx__log_rotation_retention__policy=10M size
+      - NEO4J_metrics_enabled=false
+      - NEO4J_dbms_backup_enabled=true
+      #- NEO4J_browser_credential_timeout=5m
+      - NEO4J_dbms_security_authentication__providers=native,plugin-keycloak-sso
+      - NEO4J_dbms_security_authorization__providers=native,plugin-keycloak-sso
+    volumes:
+      - /datadisk/data/neo4j4/data/neo4j-data:/data
+      - /datadisk/data/neo4j4/plugins:/plugins
+      - /datadisk/data/neo4j4/conf:/var/lib/neo4j/conf
+      - /datadisk/data/neo4j4/logs:/var/lib/neo4j/logs
+      - /datadisk/minio/data/neo4j-import:/var/lib/neo4j/import
+  api:
+    image: docker..com/internal/hume-api:{{hume_version}}
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - HUME_NLP_ENGINE_ENABLED=true
+      - HUME_GATEWAY_URI=https://gateway.dev.hume..com
+      - HUME_BLOBSTORE_ADAPTER=minio
+      - HUME_BLOBSTORE_ADAPTER_S3_HOST=https://minio.dev.hume..com
+      - HUME_BLOBSTORE_ADAPTER_S3_IDENTITY={{hume_cloud_web_minio_access_key}}
+      - HUME_BLOBSTORE_ADAPTER_S3_CREDENTIAL={{hume_cloud_web_minio_access_secret}}
+      - HUME_BLOBSTORE_CONTAINER=humelabs
+      - HUME_BLOBSTORE_CONTAINER=-hume-test
+      - HUME_KG_NLP_ENABLED=true
+      - EUREKA_URI=https://discovery.dev.hume..com/eureka
+      - feign.client.config.default.connectTimeout=160000000
+      - feign.client.config.default.readTimeout=160000000
+      - hume.orchestra.uri=http://orchestra:8100
+      - hume.security.rbac.enabled=true
+      - hume.orchestra.experimental.enabled=true
+      - hume.security.provider=keycloak
+      - keycloak.auth-server-url=https://id.demo.hume..com/auth
+      - keycloak.realm=hume
+      - keycloak.resource=hume-web
+      - keycloak.public-client=true
+      - keycloak.principal-attribute=preferred_username
+      - keycloak.use-resource-role-mappings=true
+      - keycloak.enabled=true
+      - hume.security.audit.enabled=true
+      - hume.security.audit.log.path=/audit/hume_audit.log
+      - com.hume.core.security.license.b64=AFswWTA4BgkqhkiG9w0BBQwwKwQUJJsSdTJSAtQKsMczkRSSqbXIgDYCAhAAAgEQMAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAECBBC1hRiYAADsE6waUd63/eFXqUmcdSNzQn4/I3HBHR9g3qCKF56HEcR7acdZq0XX66+C/0tgruFgFpjZIOcb77/DIolH3gG6fUXcEyb9/694PPQihfIpW3RwbsL0FzsucvSlHlxWXAkSMvL7Weo+Es9Tr6ZwRKmGr6A6ZvWy9mweK72gS8W0O3ZH0iDhtwVCykrvB4dh7EfmWhBqJphcNisSVAn5Ev1AHq/zzOVFWXopuMU24EfspYv7BcHzS6Bjzdtj/WcEFCytOInxO8c2Y71Gk0vsEoeBtOunUZntOhdzX0V/pqCq7grF2NmkwiQ19BI+oxvj0olDYD1cW642wag1Q8WmsUfHiDRqYAmDBc/18CAAxDUeRccq7tdWEfoQnAQe9xszXLkdZA+GsyZiArWO
+      - com.hume.labs.enabled=true
+    volumes:
+      - /datadisk/data/audit:/audit
+    depends_on:
+      - postgres
+  web:
+    image: docker..com/internal/hume-web:{{hume_version}}
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - HUME_API_URL=https://api.demo.hume..com
+      - KEYCLOAK_ENABLED=true
+      - KEYCLOAK_URL=https://id.demo.hume..com/auth/
+      - KEYCLOAK_REALM=hume
+      - KEYCLOAK_CLIENT=hume-web

@@ -1,0 +1,91 @@
+# {{ ansible_managed }}
+
+[Interface]
+Address = 10.200.0.1/24
+ListenPort = 51820
+PostUp = wg set %i private-key <(cat /etc/wireguard/%i.key)
+
+#Osama
+[Peer]
+PublicKey = LIdxEnrdzUP1WPsVWJjlu98bYQqaIuYZfHg/okytqj8=
+AllowedIPs = 10.200.0.2/32
+
+#Mustafa
+[Peer]
+PublicKey = zp62cgudJkK4dTFjUOBs8EMaMIlJ2nSamEccUpIQRg0=
+AllowedIPs = 10.200.0.3/32
+
+#Oracle
+[Peer]
+PublicKey = Rq4Ar1kKMtWMuDu//RP2x9V5Sbp6IBbDQ4D3wXq3kn0=
+AllowedIPs = 10.200.0.4/32
+
+#test
+[Peer]
+PublicKey = aEr5WuuAgnqUn804d4dbGiAuNlPw21a0fTwryhOg9BQ=
+AllowedIPs = 10.200.0.5/32
+
+#test2
+[Peer]
+PublicKey = mR36pURyfLt7c+b/4XftvrfEJZDX8YLvHlm/qKtdBjQ=
+AllowedIPs = 10.200.0.6/32
+
+#Ahmad
+[Peer]
+PublicKey = c1lb0UrgvZxZpPKns3d6EVbwDXLGuMw7FnJhLuVW2FE=
+AllowedIPs = 10.200.0.7/32
+
+#Ali
+[Peer]
+PublicKey = QCL2uqhES5/KV3kcFdC3Vu2q1m/ue5cwDHWZge7wdTw=
+AllowedIPs = 10.200.0.8/32
+
+#Yinhying
+[Peer]
+PublicKey = PINck9m5i1wWeIUXGYWqnQrFYrnZe6/aAFPnuAmhc2g=
+AllowedIPs = 10.200.0.9/32
+
+#Ibrahim
+[Peer]
+PublicKey = R6Ku0eZusgtC+Xr3xwSx81GDNh3I4vhxfxlSYDW/KVI=
+AllowedIPs = 10.200.0.10/32
+
+#Mohammad
+[Peer]
+PublicKey = TfaTkl4+26ZEUQMxTMeCPuzJ+8HIO35vAHu6wYqzByM=
+AllowedIPs = 10.200.0.11/32
+
+#Audrey
+[Peer]
+PublicKey = D8N7f3sBqj+FXWBUyn/AzjVFQYXKpirEi01o1np2klY=
+AllowedIPs = 10.200.0.12/32
+
+#Savage
+[Peer]
+PublicKey = dRLGi20C56kToY6hGR5DTuaAHDifJI7Rlp0DT2hTZE8=
+AllowedIPs = 10.200.0.13/32
+
+#Work
+[Peer]
+PublicKey = QZih+dQ+/5r0rCuswpJ6CmTWuMmiCMp4vMHgf1VUfmk=
+AllowedIPs = 10.200.0.14/32
+
+#Raj
+[Peer]
+PublicKey = nEEHRPQG/NdaUOOE7ubuXp3yynW60F7AkL5Cx8ueVAs=
+AllowedIPs = 10.200.0.15/32
+
+#Weldare
+[Peer]
+PublicKey = vDzWNbie9ac4JX2XlIPhmJFKxvXjeddBdxf86NGLExU=
+AllowedIPs = 10.200.0.16/32
+
+#Rasha
+[Peer]
+PublicKey = mTak85+wdTD2+A90BuuI/S2tdYqLvJSoRVlzI054LjY=
+AllowedIPs = 10.200.0.17/32
+
+#Amani
+[Peer]
+PublicKey = DoqCIHSOryLV1/iPnOCjLpjCChishfmKOBbUNIowTnA=
+AllowedIPs = 10.200.0.18/32

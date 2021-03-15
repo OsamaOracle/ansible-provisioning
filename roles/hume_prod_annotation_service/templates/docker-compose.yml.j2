@@ -1,0 +1,51 @@
+version: "3.7"
+services:
+  gateway:
+    image: docker..com/internal/hume-cloud-gateway:{{hume_version}}
+    ports:
+      - 10000:10000
+    restart: always
+    environment:
+      - eureka.client.register-with-eureka=false
+      - eureka.client.service-url.defaultZone=http://discovery:8761/eureka
+    networks:
+      - hume_prod_default
+  discovery:
+    image: docker..com/internal/hume-cloud-discovery:{{hume_version}}
+    restart: always
+    ports:
+      - 8761:8761
+    networks:
+      - hume_prod_default
+  textrank:
+    image: docker..com/internal/hume-textrank-service:{{hume_version}}
+    environment:
+      - SERVER_PORT=8086
+      - EUREKA_URI=http://discovery:8761/eureka
+      - HUME_CLOUD_ENABLED=true
+      - server.tomcat.max-connections=100
+    networks:
+      - hume_prod_default
+    ports:
+     - 8086:8086
+    networks:
+      - hume_prod_default
+  annotation:
+    image: docker..com/internal/hume-annotation-service:{{hume_version}}
+    ports:
+     - "8085:8085"
+    environment:
+      - SERVER_PORT=8085
+      - EUREKA_URI=http://discovery:8761/eureka
+      - HUME_CLOUD_ENABLED=true
+      - server.tomcat.max-connections=2
+      - "JAVA_OPTS=-Xmx4g"
+      - hume.config.store.driver=blobstore
+      - HUME_CONFIG_STORE_HOST=http://blobstore:9000
+      - HUME_CONFIG_STORE_ACCESS_KEY={{hume_prod_web_minio_access_key}}
+      - HUME_CONFIG_STORE_ACCESS_SECRET={{hume_prod_web_minio_access_secret}}
+    networks:
+      - hume_prod_default
+networks:
+  hume_prod_default:
+    external: true

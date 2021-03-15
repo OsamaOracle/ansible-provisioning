@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  gateway:
+    image: docker..com/internal/hume-cloud-gateway:{{hume_cloud_gateway_tag}}
+    ports:
+      - 10000:10000
+    restart: always
+    environment:
+      - eureka.client.register-with-eureka=false
+      - eureka.client.service-url.defaultZone=https://discovery.dev.hume..com/eureka

@@ -1,0 +1,45 @@
+---
+
+- name: create role docker directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  with_items:
+    - /docker/reverse_proxy
+    - /docker/reverse_proxy/nginx.conf.d
+    - /docker/reverse_proxy/certbot
+    - /docker/reverse_proxy/certbot/conf
+    - /docker/reverse_proxy/certbot/www
+
+
+- name: create default site config file
+  template:
+    src: default-site.conf.j2
+    dest: /docker/reverse_proxy/nginx.conf.d/default-site.conf
+    mode: 0660
+    owner: root
+    group: wheel
+
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/reverse_proxy/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: start proxy server
+  docker_compose:
+    project_src: /docker/reverse_proxy/
+    pull: yes
+
+- name: auto renew certificates
+  cron:
+    name: "reverse_proxy renew certificates"
+    minute: "12"
+    hour: "*/12"
+    job: >
+      docker run --rm -v /docker/reverse_proxy/certbot/conf:/etc/letsencrypt -v /docker/reverse_proxy/certbot/www:/var/www/certbot certbot/certbot renew --post-hook 'echo NGINX_RESTART_REQUIRED' 2>&1
+      | grep 'NGINX_RESTART_REQUIRED' && (cd /docker/reverse_proxy; /bin/docker-compose restart)

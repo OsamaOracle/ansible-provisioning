@@ -1,0 +1,65 @@
+---
+
+- name: Ensure filesystem exists on mount point for minio server data
+  filesystem:
+    fstype: ext4
+    dev: "{{ data_disk_dev }}"
+
+- name: create /datadisk directory
+  file:
+    path: /datadisk
+    state: directory
+    mode: 0755
+
+- name: Mount Minio Data volume
+  mount:
+    path: /datadisk
+    src: "{{ data_disk_dev }}"
+    fstype: ext4
+    state: mounted
+
+- name: create role docker directory
+  file:
+    path: /docker/hume_datascience
+    state: directory
+    mode: 0755
+
+- name: create role neo4j directory
+  file:
+    path: /minio/neo4j
+    state: directory
+    mode: 0755
+
+- name: create postgres data directory
+  file:
+    path: /minio/postgres/data
+    state: directory
+    mode: 0755
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/hume_datascience/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/hume_datascience/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- debug:
+    var: run_service_result

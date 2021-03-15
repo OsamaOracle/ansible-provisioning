@@ -1,0 +1,33 @@
+---
+
+- name: create role docker directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  with_items:
+    - /docker/web_nginx
+    - /docker/web_nginx/nginx.conf.d
+
+
+- name: create default site config file
+  template:
+    src: default-site.conf.j2
+    dest: /docker/web_nginx/nginx.conf.d/default-site.conf
+    mode: 0660
+    owner: root
+    group: wheel
+
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/web_nginx/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: start container
+  docker_compose:
+    project_src: /docker/web_nginx/
+    pull: yes

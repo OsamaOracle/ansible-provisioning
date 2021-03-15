@@ -1,0 +1,7 @@
+version: "3.7"
+services:
+  discovery:
+    image: docker..com/internal/hume-cloud-discovery:{{hume_cloud_discovery_tag}}
+    restart: always
+    ports:
+      - 8761:8761

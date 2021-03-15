@@ -1,0 +1,27 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/nexus
+    state: directory
+    mode: 0755
+
+- name: create role docker data directory
+  file:
+    path: /docker/nexus/data
+    state: directory
+    mode: 0777
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/nexus/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: run service
+  docker_compose:
+    project_src: /docker/nexus/
+    pull: yes
+  register: run_service_result

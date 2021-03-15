@@ -1,0 +1,6 @@
+hume_cloud_web_frontend_tag: develop
+hume_cloud_web_dev_tag: 2.8-SNAPSHOT
+hume_cloud_web_minio_access_key: miniohume
+hume_cloud_web_minio_access_secret: 9js2yR7U3Sx3WMTs
+hume_cloud_web_neo4j_password: !Rocks
+hume_cloud_web_keycloak_password: g89r,[pf6rMy<zvV;4nTm4J\PXBT;\;pPR\-KuYK

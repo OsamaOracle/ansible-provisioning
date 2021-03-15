@@ -1,0 +1,116 @@
+version: '3.7'
+services:
+  doc2vec:
+    image: docker..com/internal/hume_doc2vec:v0.4.0
+    ports:
+      - 8000:8000
+    environment:
+      MINIO_ACCESS_KEY: {{kg_hume_cloud_web_minio_access_key}}
+      MINIO_SECRET_KEY: {{kg_hume_cloud_web_minio_access_secret}}
+      MINIO_LOCAL_STORAGE: /tmp/localStorage
+      REDIS_SERVER: redis
+      UWSGI_ENTRY_POINT: doc2vec/__main__.py
+      UWSGI_CALLABLE: __hug_wsgi__
+      UWSGI_PROCS: 2
+    volumes:
+      - /datadisk/minio/data/_dev/server/localStorage:/tmp/localStorage
+      - /datadisk/minio/data/_dev/server/staticContent:/var/uwsgi/static
+  #  monitoring:
+  #        image: eoranged/rq-dashboard
+  #        ports:
+  #          - 9181:9181-
+  #        environment:
+  #          - RQ_DASHBOARD_REDIS_URL=redis://redis
+  doc2vec-worker:
+    image: docker..com/internal/hume_doc2vec:v0.4.0
+    environment:
+      MINIO_ACCESS_KEY: {{kg_hume_cloud_web_minio_access_key}}
+      MINIO_SECRET_KEY: {{kg_hume_cloud_web_minio_access_secret}}
+      MINIO_LOCAL_STORAGE: /tmp/localStorage
+      REDIS_SERVER: redis
+    volumes:
+      - /datadisk/minio/data/_dev/worker/localStorage:/tmp/localStorage
+    #        build:
+    #           context: .
+    command: rqworker -u redis://redis --logging_level DEBUG
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+  minio:
+    image: minio/minio
+    ports:
+      - 9000:9000
+    environment:
+      MINIO_ACCESS_KEY: {{kg_hume_cloud_web_minio_access_key}}
+      MINIO_SECRET_KEY: {{kg_hume_cloud_web_minio_access_secret}}
+    volumes:
+      - /datadisk/minio/data/_dev/minio/storage:/data
+    command: server /data
+  postgres:
+    image: postgres:12.0
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    ports:
+      - 5432:5432
+    volumes:
+      # Volume for the postgres database
+      - /docker/postgres/data:/var/lib/postgresql/data
+#  blobstore:
+#    # minio is only necessary if you don't want to use S3 buckets and keep the data on a local server while taking advantage of an AWS client
+#    image: docker..com/internal/hume-blobstorage:1.17.2-RELEASE
+#    restart: always
+#    environment:
+#      - MINIO_ACCESS_KEY=hume
+#      - MINIO_SECRET_KEY=hume111222333
+#    volumes:
+#      # Mount a local volume on disk against the /data volume of the minio container
+#      - /minio/data:/data
+#    command: "server /data"
+#    ports:
+#      - 9000:9000
+  # If you do a Labs only installation, Neo4j is not needed.
+  neo4j:
+    image: neo4j:4.0.2-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/{{hume_cloud_web_neo4j_password}}
+      - NEO4J_dbms_memory_heap_maxSize=8G
+      - NEO4J_dbms_connector_bolt_advertised__address={{ansible_host}}:7687
+      - NEO4JLABS_PLUGINS=["apoc"]
+    volumes:
+      - /minio/neo4j4/data/neo4j-data:/data
+      - /minio/neo4j4/plugins:/plugins
+  orchestra:
+    image: docker..com/internal/hume-orchestra:{{hume_cloud_version}}
+    ports:
+      - 8100:8100
+    volumes:
+      - /datadisk/minio/data:/data
+    environment:
+      - "JAVA_OPTS=-Xmx4g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+    restart: always
+  api:
+    image: docker..com/internal/hume-api:{{hume_cloud_version}}
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - hume.orchestra.uri=http://orchestra:8100
+      - SECURITY_SIGNUP_ENABLED=false
+      - hume.security.rbac.enabled=true
+      - hume.orchestra.experimental.enabled=true
+      - HUME_FEATURE_DRYRUN_ENABLED=true
+  web:
+    image: docker..com/internal/hume-web:develop
+    environment:
+      - HUME_API_URL=http://13.93.126.231:8080
+    ports:
+     - "8081:80"

@@ -1,0 +1,4 @@
+hume_version: 2.7.0-RC3
+hume_prod_annotation_service_replicas: 1
+hume_prod_web_minio_access_key: miniohume
+hume_prod_web_minio_access_secret: 9js2yR7U3Sx3WMTs

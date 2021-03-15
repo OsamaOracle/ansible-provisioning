@@ -1,0 +1,68 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/neo4j
+    state: directory
+    mode: 0755
+
+- name: create data directory
+  file:
+    path: /docker/neo4j/data
+    state: directory
+    mode: 0755
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/neo4j/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: run Neo4j
+  docker_compose:
+    project_src: /docker/neo4j/
+    pull: yes
+  register: run_service_result
+
+- name: set local ip address to services
+  set_fact:
+    service_container_ip:
+      neo4j: "{{ run_service_result.services['neo4j']['neo4j_neo4j_1'].networks.neo4j.IPAddress }}"
+
+- name: Wait for neo4j up and running
+  uri:
+    url: "http://{{ service_container_ip.neo4j }}:7474/"
+    status: 200
+  register: result
+  until: result.status == 200
+  retries: 60
+  delay: 5
+  check_mode: no
+
+- name: Check if default neo4j password needs to be changed
+  uri:
+    url: "http://{{ service_container_ip.neo4j }}:7474/db/manage/server/version"
+    user: neo4j
+    password: neo4j
+    force_basic_auth: yes
+    status_code:
+      - 200
+      - 401
+      - 403
+  register: neo4j_password_check_response
+  check_mode: no
+
+- debug: var=neo4j_password_check_response.json.errors
+
+- name: Change neo4j password
+  uri:
+    method: POST
+    url: "http://{{ service_container_ip.neo4j }}:7474/user/neo4j/password"
+    user: neo4j
+    password: neo4j
+    force_basic_auth: yes
+    body: '{"password":"{{ neo4j_password }}"}'
+    body_format: json
+  when: neo4j_password_check_response.json.errors[0].message == "User is required to change their password."

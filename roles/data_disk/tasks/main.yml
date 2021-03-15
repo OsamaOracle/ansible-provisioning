@@ -1,0 +1,30 @@
+---
+- set_fact:
+    _data_disk_dev: /dev/{{ data_disk_default_device_name }}
+  when:
+    - data_disk_default_device_name is defined
+
+- set_fact:
+    _data_disk_dev_groups: "{{ group_names | select('match', '^tag_' + data_disk_device_group_prefix + '_.*') | list }}"
+
+- set_fact:
+    _data_disk_dev: /dev/{{ _data_disk_dev_groups | sort | list | first | default('') | regex_replace('^tag_' + data_disk_device_group_prefix + '_', '') }}
+  when: _data_disk_dev_groups | length > 0
+
+- name: Ensure filesystem exists on mount point for data
+  filesystem:
+    fstype: "{{ data_disk_fstype }}"
+    dev: "{{ _data_disk_dev }}"
+
+- name: create the mount point directory
+  file:
+    path: "{{ data_disk_mount_path }}"
+    state: directory
+    mode: 0755
+
+- name: mount data volume
+  mount:
+    path: "{{ data_disk_mount_path }}"
+    src: "{{ _data_disk_dev }}"
+    fstype: "{{ data_disk_fstype }}"
+    state: mounted

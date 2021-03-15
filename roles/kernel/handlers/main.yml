@@ -1,0 +1,22 @@
+---
+
+- name: Set new kernel as default
+  command: "/sbin/grub2-set-default 0"
+  listen: Kernel updated handler
+
+- name: Generate new grub config
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  listen: Kernel updated handler
+
+- name: Reboot
+  shell: sleep 5 && shutdown -r now "Ansible updates triggered"
+  async: 1
+  poll: 0
+  ignore_errors: true
+  listen: Kernel updated handler
+
+- name: Wait for the server to come back up
+  wait_for_connection:
+    delay: 10
+    timeout: 900
+  listen: Kernel updated handler

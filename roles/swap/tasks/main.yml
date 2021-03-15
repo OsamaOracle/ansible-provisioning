@@ -1,0 +1,19 @@
+---
+
+- name: Check /etc/waagent.conf file exists
+  stat:
+    path: /etc/waagent.conf
+  register: waagent
+
+- name: WAAgent config
+  lineinfile:
+    path: /etc/waagent.conf
+    line: "{{ item.key }}={{ item.value }}"
+    regexp: "^{{ item.key }}"
+  loop:
+    - key: ResourceDisk.EnableSwap
+      value: y
+    - key: ResourceDisk.SwapSizeMB
+      value: "{{ (((ansible_mounts | json_query('[?mount == `/mnt/resource`].size_total') | join('') | int) / (1024 * 1024 * 1024)) | round(0,'floor') | int) * 1024 }}"
+  notify: restart waagent
+  when: waagent.stat.exists

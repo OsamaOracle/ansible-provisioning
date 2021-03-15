@@ -1,0 +1,140 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/gitlab_runner
+    state: directory
+    mode: 0755
+
+- name: create config directory
+  file:
+    path: /docker/gitlab_runner/config
+    state: directory
+    mode: 0755
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/gitlab_runner/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- docker_compose:
+    project_src: /docker/gitlab_runner/
+
+- stat:
+    path: /docker/gitlab_runner/config/config.toml
+  register: c
+
+- stat:
+    path: /docker/gitlab_runner/config/config.toml
+  register: c
+
+- name: register to gitlab
+  docker_container:
+    name: gitlab-runner-registration
+    image: gitlab/gitlab-runner
+    tty: yes
+    interactive: yes
+    auto_remove: yes
+    volumes:
+    - /docker/gitlab_runner/config:/etc/gitlab-runner
+    command:
+    - register
+    - -n
+    - --url
+    - https://gitlab.com/
+    - --registration-token
+    - "{{ gitlab_runner_registration_token }}"
+    - --executor
+    - docker
+    - --description
+    - "{{ inventory_hostname_short }}"
+    - --docker-image
+    - docker:stable
+    - --tag-list
+    - "{{ gitlab_runner_tags | join(',') }}"
+    - --docker-volumes
+    - /var/run/docker.sock:/var/run/docker.sock
+  when: c.stat.isreg is not defined
+
+- set_fact:
+    is_runner_config_updated: no
+
+- name: Set concurrency limuit for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^concurrent *='
+    line: concurrent = 10
+  register: config_updated_result
+
+- set_fact:
+    is_runner_config_updated: "{{ is_runner_config_updated or config_updated_result.changed }}"
+  when: config_updated_result.changed
+
+- name: Set concurrency limit for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^ *output_limit *='
+    line: "  output_limit = 16384"
+    insertafter: "^[[][[]runners]]"
+  register: config_updated_result
+
+- name: Set cache type for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^    Type = '
+    line: '    Type = "s3"'
+    insertafter: "^  [[]runners.cache]"
+  register: config_updated_result
+
+- name: Set cache share for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^    Shared = '
+    line: '    Shared = true'
+    insertafter: "^  [[]runners.cache]"
+  register: config_updated_result
+
+- name: Set cache for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^      ServerAddress = '
+    line: '      ServerAddress = "s3.amazonaws.com"'
+    insertafter: "^    [[]runners.cache.s3]"
+  register: config_updated_result
+
+- name: Set cache for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^      BucketName = '
+    line: '      BucketName = "cache.gitlab-workers..com"'
+    insertafter: "^    [[]runners.cache.s3]"
+  register: config_updated_result
+
+- name: Set cache for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^      BucketLocation = '
+    line: '      BucketLocation = "eu-west-1"'
+    insertafter: "^    [[]runners.cache.s3]"
+  register: config_updated_result
+
+- name: Set cache for runner
+  lineinfile:
+    path: /docker/gitlab_runner/config/config.toml
+    regexp: '^      Insecure = '
+    line: '      Insecure = false'
+    insertafter: "^    [[]runners.cache.s3]"
+  register: config_updated_result
+
+
+- set_fact:
+    is_runner_config_updated: "{{ is_runner_config_updated or config_updated_result.changed }}"
+  when: config_updated_result.changed
+
+
+- docker_compose:
+    project_src: /docker/gitlab_runner/
+    restarted: "{{ is_runner_config_updated }}"

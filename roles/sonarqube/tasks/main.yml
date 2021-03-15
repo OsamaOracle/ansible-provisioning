@@ -1,0 +1,51 @@
+---
+
+- name: create role docker directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  with_items:
+    - /docker/sonarqube
+    - /docker/sonarqube/postgresql
+    - /docker/sonarqube/postgresql/data
+
+- name: create role docker directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0757
+  with_items:
+    - /docker/sonarqube/sonarqube
+    - /docker/sonarqube/sonarqube/data
+    - /docker/sonarqube/sonarqube/logs
+
+- sysctl:
+    name: vm.max_map_count
+    value: '262144'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/sonarqube/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: run service
+  docker_compose:
+    project_src: /docker/sonarqube/
+    pull: yes
+  register: run_service_result
+
+- name: register to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: sonarqube..com
+    endpoints:
+      "/": "http://{{ run_service_result.services.sonarqube.sonarqube_sonarqube_1.networks.reverse_proxy.IPAddress }}:9000"
+

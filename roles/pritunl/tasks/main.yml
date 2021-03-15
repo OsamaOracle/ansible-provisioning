@@ -1,0 +1,38 @@
+---
+
+- name: create role docker directory
+  file:
+    path: "{{ pritunl_local_path }}"
+    state: directory
+    mode: 0755
+
+- name: create role docker data directory
+  file:
+    path: "{{ pritunl_local_path }}/data"
+    state: directory
+    mode: 0755
+
+- name: create role pritunl config file
+  file:
+    path: "{{ pritunl_local_path }}/data/pritunl.conf"
+    state: file
+    mode: 0644
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ pritunl_local_path }}/docker-compose.yml"
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- docker_compose:
+    project_src: "{{ pritunl_local_path }}/"
+    pull: yes

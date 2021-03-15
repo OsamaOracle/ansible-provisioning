@@ -1,0 +1,21 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - certbot
+
+- name: Get acme-dns-certbot plugin
+  get_url:
+    url: "https://github.com/joohoi/acme-dns-certbot-joohoi/raw/master/acme-dns-auth.py"
+    dest: /etc/letsencrypt/acme-dns-auth.py
+    mode: 0755
+
+- name: auto renew certificates
+  cron:
+    name: "reverse_proxy renew certificates"
+    minute: "12"
+    hour: "*/12"
+    job: >
+      certbot renew --post-hook 'echo NGINX_RESTART_REQUIRED' 2>&1
+      | grep 'NGINX_RESTART_REQUIRED' && systemctl restart nginx

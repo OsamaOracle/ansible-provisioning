@@ -1,0 +1,8 @@
+version: '3.7'
+services:
+  nginx:
+    image: nginx:1.17-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - /docker/web_nginx/nginx.conf.d:/etc/nginx/conf.d

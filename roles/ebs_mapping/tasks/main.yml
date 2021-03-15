@@ -1,0 +1,25 @@
+---
+
+- name: ebsnvme-id2 script
+  ansible.builtin.copy:
+    src: ebsnvme-id
+    dest: /sbin/ebsnvme-id
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: ec2nvme-nsid script
+  ansible.builtin.copy:
+    src: ec2nvme-nsid
+    dest: /usr/lib/udev/ec2nvme-nsid
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: 70-ec2-nvme-devices.rules rules
+  ansible.builtin.copy:
+    src: 70-ec2-nvme-devices.rules
+    dest: /etc/udev/rules.d/70-ec2-nvme-devices.rules
+    owner: root
+    group: root
+    mode: '0644'

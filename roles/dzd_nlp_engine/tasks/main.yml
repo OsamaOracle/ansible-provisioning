@@ -1,0 +1,35 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/dzd_nlp_engine
+    state: directory
+    mode: 0755
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/dzd_nlp_engine/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: copy nginx config
+  template:
+    src: nginx.conf
+    dest: /docker/dzd_nlp_engine/nginx.conf
+    mode: 0600
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- docker_compose:
+    project_src: /docker/dzd_nlp_engine/
+    pull: yes
+

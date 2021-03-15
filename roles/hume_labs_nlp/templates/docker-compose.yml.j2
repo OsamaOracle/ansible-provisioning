@@ -1,0 +1,9 @@
+hume_labs_nlp:
+    image: docker..com/internal/hume-nlp-engine:{{hume_labs_nlp_tag}}
+    environment:
+      - "JAVA_OPTS=-Xmx5g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+      - SERVER_PORT=8085
+    expose:
+      - "8085"
+    ports:
+      - "8070:8085"

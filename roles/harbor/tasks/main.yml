@@ -1,0 +1,68 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/harbor
+    state: directory
+    mode: 0755
+
+- name: allow overcommit # see (https://stackoverflow.com/questions/11752544/redis-bgsave-failed-because-fork-cannot-allocate-memory)
+  sysctl:
+    name: vm.overcommit_memory
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: create installation files
+  template:
+    src: "{{ item.name }}.j2"
+    dest: /docker/harbor/{{ item.name }}
+    mode: "{{ item.mode | default('0644') }}"
+    owner: root
+    group: wheel
+  with_items:
+  - name: prepare
+    mode: '0700'
+  - name: LICENSE
+  - name: harbor.yml
+
+- name: run Harbor's prepare script
+  shell: ./prepare --with-clair
+  args:
+    chdir: /docker/harbor/
+    creates: /docker/harbor/common/config/core/app.conf
+
+- name: update internal nginx config not to override X-Forwarded-Proto header
+  lineinfile:
+    path: /docker/harbor/common/config/nginx/nginx.conf
+    state: absent
+    regexp: '^ *proxy_set_header X-Forwarded-Proto.*$'
+
+- name: run service
+  docker_compose:
+    project_src: /docker/harbor/
+    pull: yes
+  register: run_service_result
+
+- name: set harbor_proxy_container_ip fact
+  set_fact:
+    harbor_proxy_container_ip: "{{ run_service_result.services.proxy.nginx.networks.reverse_proxy.IPAddress }}"
+
+- name: register to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: harbor..com
+    client_max_body_size: 0
+    endpoints:
+      "/": "http://{{ harbor_proxy_container_ip }}:8080"
+
+- name: register to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: docker..com
+    client_max_body_size: 0
+    endpoints:
+      "/": "http://{{ harbor_proxy_container_ip }}:8080"

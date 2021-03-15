@@ -1,0 +1,53 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/hume_prod
+    state: directory
+    mode: 0755
+
+- name: create role neo4j directory
+  file:
+    path: /minio/neo4j
+    state: directory
+    mode: 0755
+
+- name: create postgres data directory
+  file:
+    path: /minio/postgres/data
+    state: directory
+    mode: 0755
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/hume_prod/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/hume_prod/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- debug:
+    var: run_service_result
+
+- name: set local ip address to services
+  set_fact:
+    service_container_ip:
+      frontend: "{{ run_service_result.services['web']['hume_prod_web_1'].networks.reverse_proxy.IPAddress }}"
+      backend: "{{ run_service_result.services['api']['hume_prod_api_1'].networks.reverse_proxy.IPAddress }}"

@@ -1,0 +1,6 @@
+---
+
+gitlab_runner_tags:
+  - aws
+  - docker
+

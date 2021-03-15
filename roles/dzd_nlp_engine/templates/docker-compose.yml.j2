@@ -1,0 +1,25 @@
+version: '3'
+networks:
+  humelabs:
+services:
+  lb:
+    image: nginx
+    container_name: lb
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - humelabs
+    ports:
+      - "8070:80"
+
+  nlp-engine:
+    image: docker..com/internal/hume-nlp-engine:{{ dzd_nlp_engine_tag }}
+    environment:
+      - "JAVA_OPTS=-Xmx5g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+    expose:
+      - "80"
+    networks:
+        humelabs:
+          aliases:
+            - nlpengine
+

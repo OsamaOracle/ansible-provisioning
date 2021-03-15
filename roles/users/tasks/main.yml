@@ -1,0 +1,75 @@
+---
+
+#- debug:
+#    msg: "{{ enabled_users | map('extract', users) | list | selectattr('sudo') | map(attribute='ssh_key') | list | join('\n') | to_nice_yaml}}"
+
+- name:  group creation
+  group:
+    name: 
+
+- name: Create  user
+  user:
+    name: 
+    comment: Cloud User
+    group: 
+    groups: wheel
+    createhome: yes
+    append: yes
+
+- name: SSH keys for  user
+  authorized_key:
+    user: 
+    key: "{{ enabled_users | map('extract', users) | list | selectattr('sudo') | map(attribute='ssh_key') | list | join('\n') }}"
+    path: /home//.ssh/authorized_keys
+    exclusive: yes
+
+- name: Enabled per-user group exists
+  group:
+    name: "{{ item }}"
+  loop: "{{ enabled_users }}"
+  when: users_create_per_user_group | bool
+
+- name: Enabled users
+  user:
+    name: "{{ item }}"
+    group: "{{ item if users_create_per_user_group else users_group }}"
+    groups: "{{ ['wheel'] if users[item].sudo else [] | union(users[item].groups | default([])) | join(',') }}"
+    shell: "{{ users[item].shell | default(users_default_shell) }}"
+    password: "{{ users[item].password | default('!') }}"
+    comment: "{{ users[item].name | default('') }}"
+    uid: "{{ users[item].uid | default(omit) }}"
+    createhome: "{{ 'yes' if users_create_homedirs else 'no' }}"
+    state: present
+  loop: "{{ enabled_users }}"
+
+- name: SSH keys
+  authorized_key:
+    user: "{{ item }}"
+    key: "{{ users[item]['ssh_key'] }}"
+    exclusive: yes
+    path: /home/{{ item }}/.ssh/authorized_keys
+  with_items: "{{ enabled_users }}"
+
+- name: Set facts
+  set_fact:
+    disabled_users: "{{ users | dict2items | map(attribute='key') | list | difference(enabled_users) | sort }}"
+
+- name: Disabled users
+  user:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ disabled_users }}"
+
+- name: Disabled users' per-user group absent
+  group:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ disabled_users }}"
+  when: users_create_per_user_group | bool
+
+- name: Allow 'wheel' group to have passwordless sudo
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%wheel'
+    line: '%wheel ALL=(ALL) NOPASSWD: ALL'

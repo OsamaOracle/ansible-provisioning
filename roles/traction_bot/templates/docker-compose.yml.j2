@@ -1,0 +1,8 @@
+version: '3'
+services:
+  trello_slack_bot:
+    image: docker..com/internal/traction-trello-slack-bot:{{traction_bot_tag}}
+    ports:
+      - 5000:5000
+    environment:
+      - SLACK_CHANNEL_WEBHOOK={{traction_bot_slack_webhook}}

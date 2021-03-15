@@ -1,0 +1,55 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/elastic
+    state: directory
+    mode: 0755
+
+- name: create data directory
+  file:
+    path: /minio/elastic
+    state: directory
+    mode: 0777
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/elastic/docker-compose.yml
+    mode: 0700
+    owner: root
+    group: wheel
+
+- name: create filebeat configuration file
+  template:
+    src: filebeat.yml
+    dest: /docker/elastic/filebeat.yml
+    mode: 0640
+    owner: root
+    group: wheel
+
+- name: run service
+  docker_compose:
+    project_src: /docker/elastic/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+#
+#- name: register elastic to reverse proxy
+#  include_role:
+#    name: reverse_proxy_record
+#  vars:
+#    server_name: elastic.dev.hume..com
+#    endpoints:
+#      "/": "http://{{ run_service_result.services['elastic']['elastic_elastic_1'].networks.reverse_proxy.IPAddress }}:9200"
+#
+#- name: register kibana to reverse proxy
+#  include_role:
+#    name: reverse_proxy_record
+#  vars:
+#    server_name: kibana.dev.hume..com
+#    endpoints:
+#      "/": "http://{{ run_service_result.services['kibana']['elastic_kibana_1'].networks.reverse_proxy.IPAddress }}:5601"

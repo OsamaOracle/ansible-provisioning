@@ -1,0 +1,38 @@
+---
+
+- name: Merge YUM repositories vars
+  merge_vars:
+    suffix_to_merge: yum_repositories__to_merge
+    merged_var_name: merged_yum_repositories
+    expected_type: 'list'
+
+- name: Add YUM repositories
+  yum_repository:
+    description: "{{ item.description }}"
+    name: "{{ item.name }}"
+    baseurl: "{{ item.baseurl }}"
+    gpgcheck: "{{ item.gpgcheck | default(False) }}"
+    gpgkey: "{{ item.gpgkey | default('') }}"
+    keepcache: "0"
+  loop: "{{ merged_yum_repositories }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Find installed YUM repositories
+  find:
+    path: /etc/yum.repos.d/
+  register: current_repos
+
+- name: Remove unmanaged YUM repositories
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ current_repos.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: yum__remove_unmanaged_repositories | bool and (item.path | basename)[:-5] not in ( merged_yum_repositories | map(attribute='name') | list )
+
+
+
+
+

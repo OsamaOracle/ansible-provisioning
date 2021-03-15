@@ -1,0 +1,5 @@
+.retry
+*.iml
+.idea
+action_plugins/*.pyc
+action_plugins/__pycache__

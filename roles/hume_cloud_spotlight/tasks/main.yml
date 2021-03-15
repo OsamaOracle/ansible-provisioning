@@ -1,0 +1,43 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/hume_cloud_spotlight
+    state: directory
+    mode: 0755
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/hume_cloud_spotlight/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/hume_cloud_spotlight/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- debug:
+    var: run_service_result
+
+- name: register to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: spotlight.dev.hume..com
+    endpoints:
+      "/": "http://{{ run_service_result.services['spotlight']['hume_cloud_spotlight_spotlight_1'].networks.reverse_proxy.IPAddress }}"

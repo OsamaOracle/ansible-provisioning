@@ -1,0 +1,7 @@
+hume_web_hume_api_tag: 0.14.0
+hume_web_hume_api_wikidata_enricher_enabled: false
+hume_web_hume_web_tag: 0.14.0
+hume_web_hume_neo4j_server_tag: english-3.5.8b
+hume_web_hume_nlp_engine_tag: 1.3.0-beta4
+hume_web_aws_credential: 9hQYCcobdQWpb64fTU/1oASmPWtFLFZ5HMfNIvjD
+hume_web_aws_identity: AKIAIAQWV4E5IOR7YZ5A

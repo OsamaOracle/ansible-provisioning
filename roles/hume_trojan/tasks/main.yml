@@ -1,0 +1,75 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/trojan
+    state: directory
+    mode: 0755
+
+- name: create postgres directory
+  file:
+    path: /docker/postgres/data
+    state: directory
+    mode: 0777
+
+- name: create minio directory
+  file:
+    path: /docker/minio/data
+    state: directory
+    mode: 0777
+
+- name: create role neo4j directory
+  file:
+    path: /docker/neo4j
+    state: directory
+    mode: 0755
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/trojan/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/trojan/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- debug:
+    var: run_service_result
+
+- name: set local ip address to services
+  set_fact:
+    service_container_ip:
+      frontend: "{{ run_service_result.services['web']['trojan_web_1'].networks.reverse_proxy.IPAddress }}"
+      backend: "{{ run_service_result.services['api']['trojan_api_1'].networks.reverse_proxy.IPAddress }}"
+
+- name: register frontend to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "fujitsu.hume..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.frontend }}"
+
+- name: register api to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "api.fujitsu.hume..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.backend }}:8080"

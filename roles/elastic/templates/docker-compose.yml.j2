@@ -1,0 +1,47 @@
+version: "3.7"
+services:
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "discovery.type=single-node"
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD={{elastic_password}}
+      - xpack.license.self_generated.type=basic
+      - indices.breaker.total.use_real_memory=false
+      - "http.cors.allow-origin=*"
+      - "http.cors.enabled=true"
+      - "http.cors.allow-headers=X-Requested-With,X-Auth-Token,Content-Type,Content-Length,Authorization"
+      - "http.cors.allow-credentials=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - /minio/elastic:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.4.0
+    environment:
+      - "ELASTICSEARCH_HOSTS=http://elastic:9200"
+      - "XPACK_SECURITY_ENABLED=true"
+      - "ELASTICSEARCH_USERNAME=elastic"
+      - "ELASTICSEARCH_PASSWORD={{elastic_password}}"
+    ports:
+      - 5601:5601
+    depends_on:
+      - elastic
+  filebeat:
+    image: "docker.elastic.co/beats/filebeat:7.4.0"
+    user: root
+    volumes:
+        - /docker/elastic/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+        - /var/lib/docker:/var/lib/docker:ro
+        - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - "XPACK_SECURITY_ENABLED=true"
+      - ELASTIC_PASSWORD={{elastic_password}}
+    depends_on:
+      - elastic

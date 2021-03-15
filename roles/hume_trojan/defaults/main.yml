@@ -1,0 +1,4 @@
+hume_cloud_web_minio_access_key: miniohume
+hume_cloud_web_minio_access_secret: 5KFdZWT8gUnrdUfP
+hume_cloud_web_neo4j_password: EPghpZx4hDJ62ah5
+minio_disk_dev: /dev/sdc

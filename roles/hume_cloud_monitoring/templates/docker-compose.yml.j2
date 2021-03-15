@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+  prometheus:
+    image: prom/prometheus:{{hume_cloud_monitoring_prometeus_version}}
+    volumes:
+      - /docker/hume_cloud_monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    networks:
+      - hume_cloud_web_default
+  grafana:
+    image: grafana/grafana:{{hume_cloud_monitoring_grafana_version}}
+    volumes:
+      - /minio/grafana/data:/var/lib/grafana
+    ports:
+      - 3000:3000
+    networks:
+      - hume_cloud_web_default
+    depends_on:
+      - prometheus
+networks:
+  hume_cloud_web_default:
+    external: true

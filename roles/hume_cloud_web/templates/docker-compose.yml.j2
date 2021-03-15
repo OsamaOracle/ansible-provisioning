@@ -1,0 +1,256 @@
+version: "3.7"
+services:
+  postgres2:
+      image: postgres:12.0
+      volumes:
+         - /minio/postgres2:/var/lib/postgresql/data
+      environment:
+        POSTGRES_DB: keycloak
+        POSTGRES_USER: keycloak
+        POSTGRES_PASSWORD: password
+      command: -p 5433
+      expose:
+        - "5433" # Publishes 5433 to other containers but NOT to host machine
+  keycloak:
+      image: quay.io/keycloak/keycloak:9.0.3
+      environment:
+        - DB_VENDOR=POSTGRES
+        - DB_ADDR=postgres2
+        - DB_PORT=5433
+        - DB_DATABASE=keycloak
+        - DB_USER=keycloak
+        - DB_SCHEMA=public
+        - DB_PASSWORD=password
+        - KEYCLOAK_USER=admin
+        - KEYCLOAK_PASSWORD={{hume_cloud_web_keycloak_password}}
+        - PROXY_ADDRESS_FORWARDING=true
+      ports:
+        - 8090:8080
+      depends_on:
+        - postgres2
+  rabbit:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - RABBITMQ_DEFAULT_USER=hume
+      - RABBITMQ_DEFAULT_PASS=hume!rabbit2013
+  orchestra:
+    image: docker..com/internal/hume-orchestra:{{hume_cloud_web_dev_tag}}
+    ports:
+      - 8100:8100
+      - 7001:7001
+    environment:
+      - "JAVA_OPTS=-Xmx4g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+      - orchestra.autostart.default.enabled=true
+      - orchestra.datasource.filesystemRoot=/data/orchestra_db/meta
+      - orchestra.startup.workflows.autoload=true
+      - orchestra.startup.workflows.directory=/data/orchestra_db/workflows
+      - server.max-http-header-size=48000
+    restart: always
+    volumes:
+      - /minio/hume_cloud_data:/data
+      - /orchestra-plugins:/plugins
+  postgres:
+    image: postgres:12.0
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    volumes:
+      - /minio/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  tika_pdf:
+    image: docker..com/internal/hume-tika-pdf:2.6.1
+    ports:
+      - "8089:8089"
+  dutchnlp:
+    image: docker..com/internal/dutch-nlp-api:50dab0c
+    ports:
+      - "8908:5000"
+    volumes:
+      - "/minio/models:/data"
+    environment:
+      - "NER_MODEL=ner-model-dsl_cased.ser.gz"
+      - "STANFORD_NER_JAR=stanford-ner.jar"
+  pyrser:
+    image: docker..com/internal/webpyrser:51792df
+    ports:
+      - "8097:8000"
+  neo4j4:
+    image: neo4j:4.1.4-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/{{hume_cloud_web_neo4j_password}}
+      - NEO4J_dbms_memory_heap_maxSize=4G
+      - NEO4J_dbms_connector_bolt_advertised__address=hume-dev-001.aws..com:7687
+      - NEO4JLABS_PLUGINS=["apoc","graph-data-science"]
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*,apoc.*
+      - NEO4J_dbms_logs_query_parameter__logging__enabled=true
+      - NEO4J_metrics_enabled=false
+      - NEO4J_dbms_backup_enabled=true
+      - NEO4J_dbms_lock_acquisition_timeout=5s
+    volumes:
+      - /minio/neo4j4/data/neo4j-data:/data
+  api:
+    image: docker..com/internal/hume-api:{{hume_cloud_web_dev_tag}}
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - HUME_NLP_ENGINE_ENABLED=true
+      - HUME_GATEWAY_URI=https://user:password@gateway.dev.hume..com
+      - HUME_NLP_ENGINE_DRIVER=skill
+      - HUME_BLOBSTORE_ADAPTER=minio
+      - HUME_BLOBSTORE_ADAPTER_S3_HOST=https://minio.dev.hume..com
+      - HUME_BLOBSTORE_ADAPTER_S3_IDENTITY={{hume_cloud_web_minio_access_key}}
+      - HUME_BLOBSTORE_ADAPTER_S3_CREDENTIAL={{hume_cloud_web_minio_access_secret}}
+      - HUME_BLOBSTORE_CONTAINER=humelabs
+      - HUME_KG_NLP_ENABLED=true
+      - EUREKA_URI=https://discovery.dev.hume..com/eureka
+      - feign.client.config.default.connectTimeout=160000000
+      - feign.client.config.default.readTimeout=160000000
+      - hume.orchestra.uri=http://orchestra:8100
+      - "JAVA_OPTS=-Xmx4g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+      - hume.security.rbac.enabled=true
+      - HUME_FEATURE_DRYRUN_ENABLED=true
+      - HUME_FEATURE_PERSPECTIVES_ENABLED=true
+      - com.hume.labs.enabled=true
+      - hume.security.audit.enabled=true
+      - hume.security.audit.log.path=/audit/hume_audit.log
+    volumes:
+      - "/minio/audit:/audit"
+    depends_on:
+      - postgres
+  web:
+    image: docker..com/internal/hume-web:{{hume_cloud_web_frontend_tag}}
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - HUME_API_URL=https://api.dev.hume..com
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+    - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker:
+    image: confluentinc/cp-enterprise-kafka
+    hostname: broker
+    container_name: broker
+    depends_on:
+    - zookeeper
+    ports:
+    - "9092:9092"
+    expose:
+    - "9093"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9093,OUTSIDE://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093,OUTSIDE://0.0.0.0:9092
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:9093
+
+      # workaround if we change to a custom name the schema_registry fails to start
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: 'true'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+
+  schema_registry:
+    image: confluentinc/cp-schema-registry
+    hostname: schema_registry
+    container_name: schema_registry
+    depends_on:
+    - zookeeper
+    - broker
+    ports:
+    - "8061:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema_registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+
+  connect:
+    image: confluentinc/cp-kafka-connect
+    hostname: connect
+    container_name: connect
+    depends_on:
+    - zookeeper
+    - broker
+    - schema_registry
+    ports:
+    - "8083:8083"
+    volumes:
+    - ./plugins:/tmp/connect-plugins
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: 'broker:9093'
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: compose-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema_registry:8081'
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema_registry:8081'
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      CONNECT_PLUGIN_PATH: /usr/share/java,/tmp/connect-plugins
+      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=DEBUG,org.I0Itec.zkclient=DEBUG,org.reflections=ERROR
+  control-center:
+    image: confluentinc/cp-enterprise-control-center
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+    - zookeeper
+    - broker
+    - schema_registry
+    - connect
+    ports:
+    - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:9093'
+      CONTROL_CENTER_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      CONTROL_CENTER_CONNECT_CLUSTER: 'connect:8083'
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      PORT: 9021
+  ldap:
+    image: osixia/openldap:1.3.0
+    ports:
+      - 389:389
+      - 636:636
+    volumes:
+      - /docker/hume_cloud_web/ga.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-bootstrap.ldif
+    command: --copy-service --loglevel debug
+  mail:
+    image: mailhog/mailhog:v1.0.0
+    ports:
+      - 1025:1025
+      - 8025:8025

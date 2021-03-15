@@ -1,0 +1,75 @@
+version: '3.7'
+services:
+  postgres:
+    image: postgres:12.0
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    ports:
+      - 5432:5432
+    volumes:
+      # Volume for the postgres database
+      - /docker/postgres/data:/var/lib/postgresql/data
+  blobstore:
+    # minio is only necessary if you don't want to use S3 buckets and keep the data on a local server while taking advantage of an AWS client
+    image: docker..com/internal/hume-blobstorage:1.17.2-RELEASE
+    restart: always
+    environment:
+      - MINIO_ACCESS_KEY=hume
+      - MINIO_SECRET_KEY=hume111222333
+    volumes:
+      # Mount a local volume on disk against the /data volume of the minio container
+      - /minio/data:/data
+    command: "server /data"
+    ports:
+      - 9000:9000
+  # If you do a Labs only installation, Neo4j is not needed.
+  neo4j:
+    image: neo4j:4.0.7-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/{{hume_cloud_web_neo4j_password}}
+      - NEO4J_dbms_memory_heap_maxSize=8G
+      - NEO4J_dbms_connector_bolt_advertised__address={{ansible_host}}:7687
+      - NEO4JLABS_PLUGINS=["apoc","graph-data-science"]
+      - NEO4J_metrics_enabled=false
+      - NEO4J_dbms_backup_enabled=true
+    volumes:
+      - /minio/neo4j4/data/neo4j-data:/data
+      - /minio/neo4j4/plugins:/plugins
+  orchestra:
+    image: docker..com/internal/hume-orchestra:{{hume_cloud_version}}
+    ports:
+      - 8100:8100
+    volumes:
+      - /minio/data:/data
+    environment:
+      - "JAVA_OPTS=-Xmx4g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+    restart: always
+  api:
+    image: docker..com/internal/hume-api:{{hume_cloud_version}}
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - hume.orchestra.uri=http://orchestra:8100
+      - SECURITY_SIGNUP_ENABLED=false
+      - hume.security.rbac.enabled=true
+      - HUME_FEATURE_DRYRUN_ENABLED=true
+  web:
+    image: docker..com/internal/hume-web:{{hume_cloud_version}}
+    environment:
+      - HUME_API_URL=https://api.corona.hume..com
+    ports:
+      - "8081:80"
+
+networks:
+  default:
+    external:
+      name: reverse_proxy

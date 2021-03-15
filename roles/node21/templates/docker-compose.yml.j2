@@ -1,0 +1,68 @@
+version: "3.7"
+
+services:
+  node21-backend:
+    restart: always
+    image: docker..com/node21/node21-backend:{{ node21_backend_version }}
+    environment:
+      - NEO4J_URI=bolt://node21-neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD={{ node21_neo4j_password }}
+      - GRAPHQL_LISTEN_PORT=4001
+      - GRAPHQL_URI=http://localhost:4001/graphql
+      - JWT_SECRET={{ node21_jwt_secret }}
+      - AUTH0_DOMAIN={{ node21_auth0_domain }}
+      - M2M_CLIENT_ID={{ node21_m2m_client_id }}
+      - M2M_CLIENT_SECRET={{ node21_m2m_client_secret }}
+      - M2M_AUDIENCE={{ node21_m2m_audience }}
+      - AUTH_DIRECTIVES_ROLE_KEY=https://node21..com/roles
+      - HUME_ENDPOINT={{ node21_hume_endpoint }}
+      - HUME_TIMEOUT={{ node21_hume_timeout }}
+      - WEB_AAS_ENDPOINT=http://node21-webaas:5006/shallowcrawl
+      - WEB_AAS_TIMEOUT={{ node21_webaas_timeout }}
+      - NODE_ENV={{ node21_env_long }}
+      - DISABLE_FULLTEXT_QUERY_ESCAPING=true
+    networks:
+      - proxy
+      - neo4j
+  
+  node21-frontend:
+    restart: always
+    image: docker..com/node21/node21-frontend:{{ node21_frontend_version }}
+    environment:
+      - NODE21_IMAGE_TAG={{ node21_frontend_version }}
+      - NODE21_ENV={{ node21_env }}
+      - NODE21_AUTH0_DOMAIN={{ node21_auth0_domain }}
+      - NODE21_AUTH0_CLIENT_ID={{ node21_client_id }}
+      - NODE21_AUTH0_AUDIENCE={{ node21_audience }}
+      - NODE_ENV={{ node21_env_long }}
+    networks:
+      - proxy
+
+  node21-neo4j:
+    restart: always
+    image: neo4j:{{ node21_neo4j_version }}
+    environment:
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+    volumes:
+      - /docker/node21/neo4j-data:/data
+      - /docker/node21/neo4j-plugins:/plugins
+      - /backup/node21/neo4j:/backup
+    networks:
+      - neo4j
+
+  node21-webaas:
+    restart: always
+    image: docker..com/internal/web-aas:node21-1.0
+    networks:
+      - neo4j
+
+
+
+networks:
+  proxy:
+    external:
+      name: reverse_proxy
+  neo4j:
+    name: node21_neo4j
+

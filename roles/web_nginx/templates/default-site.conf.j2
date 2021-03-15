@@ -1,0 +1,17 @@
+server {
+    client_max_body_size 100m;
+    client_body_buffer_size 16k;
+    listen 80;
+    server_name ~^.*$;
+
+    location / {
+        proxy_pass https://.github.io;
+        proxy_intercept_errors on;
+
+        proxy_set_header Host .com;
+        proxy_set_header X_FORWARDED_PROTO https;
+
+        # Give GitHub control over caching headers
+        expires off;
+    }
+}

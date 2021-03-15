@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  spotlight:
+    image: dbpedia/spotlight-english:{{hume_cloud_spotlight_tag}}
+    restart: always
+    command: "spotlight.sh"
+networks:
+  default:
+    external:
+      name: reverse_proxy

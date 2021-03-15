@@ -1,0 +1,87 @@
+---
+
+- name: Ensure filesystem exists on mount point for minio server data
+  filesystem:
+    fstype: ext4
+    dev: "{{ data_disk_dev }}"
+
+- name: create /datadisk directory
+  file:
+    path: /datadisk
+    state: directory
+    mode: 0755
+
+- name: Mount Minio Data volume
+  mount:
+    path: /datadisk
+    src: "{{ data_disk_dev }}"
+    fstype: ext4
+    state: mounted
+
+- name: create role docker directory
+  file:
+    path: /docker/hume_covid
+    state: directory
+    mode: 0755
+
+- name: create role neo4j directory
+  file:
+    path: /minio/neo4j
+    state: directory
+    mode: 0755
+
+- name: create postgres data directory
+  file:
+    path: /minio/postgres/data
+    state: directory
+    mode: 0755
+
+- set_fact:
+    restart_docker: no
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/hume_covid/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+
+- name: run service
+  docker_compose:
+    project_src: /docker/hume_covid/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- debug:
+    var: run_service_result
+
+- name: set local ip address to services
+  set_fact:
+    service_container_ip:
+      frontend: "{{ run_service_result.services['web']['hume_covid_web_1'].networks.reverse_proxy.IPAddress }}"
+      backend: "{{ run_service_result.services['api']['hume_covid_api_1'].networks.reverse_proxy.IPAddress }}"
+
+- name: register frontend to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "covid19.hume..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.frontend }}"
+
+- name: register api to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "api.covid19.hume..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.backend }}:8080"

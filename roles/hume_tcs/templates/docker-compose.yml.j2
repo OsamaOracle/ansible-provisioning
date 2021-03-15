@@ -1,0 +1,55 @@
+version: "3.7"
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    ports:
+      - "5432:5432"
+  neo4j:
+    image: neo4j:3.5.11-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/{{hume_cloud_web_neo4j_password}}
+      - NEO4J_dbms_memory_heap_maxSize=4G
+  api:
+    image: docker..com/internal/hume-api:{{hume_tcs_tag}}
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - NEO4J_HOST=neo4j
+      - NEO4J_PASSWORD={{hume_cloud_web_neo4j_password}}
+      - HUME_NLP_ENGINE_ENABLED=true
+      - HUME_GATEWAY_URI=https://user:password@gateway.dev.hume..com
+      - HUME_NLP_ENGINE_DRIVER=feign
+      - HUME_KG_MULTIGRAPH=false
+      - HUME_BLOBSTORE_ADAPTER=minio
+      - HUME_BLOBSTORE_ADAPTER_S3_HOST=https://minio.dev.hume..com
+      - HUME_BLOBSTORE_ADAPTER_S3_IDENTITY={{hume_cloud_web_minio_access_key}}
+      - HUME_BLOBSTORE_ADAPTER_S3_CREDENTIAL={{hume_cloud_web_minio_access_secret}}
+      - HUME_BLOBSTORE_CONTAINER=-hume-tcs
+      - HUME_KG_NLP_ENABLED=true
+      - "COM_HUME_CORE_SECURITY_LICENSE_B64={{hume_cloud_web_license_key}}"
+      - EUREKA_URI=https://discovery.dev.hume..com/eureka
+      - feign.client.config.default.connectTimeout=160000000
+      - feign.client.config.default.readTimeout=160000000
+    depends_on:
+      - postgres
+  web:
+    image: docker..com/internal/hume-web:{{hume_tcs_tag}}
+    environment:
+      - HUME_API_URL=http://{{ansible_host}}:8080
+    ports:
+      - "8081:80"
+networks:
+  default:
+    external:
+      name: reverse_proxy

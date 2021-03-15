@@ -1,0 +1,66 @@
+version: "3.7"
+services:
+  minio:
+    image: docker..com/internal/hume-blobstorage:{{kg_hume_version}}
+    restart: always
+    environment:
+      - MINIO_ACCESS_KEY={{kg_hume_cloud_web_minio_access_key}}
+      - MINIO_SECRET_KEY={{kg_hume_cloud_web_minio_access_secret}}
+    volumes:
+      - /minio:/data
+    command: "server /data"
+    ports:
+      - 9000:9000
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password123
+      POSTGRES_USER: hume
+    ports:
+      - 5432:5432
+  neo4j:
+    image: neo4j:3.5.11-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/{{kg_hume_cloud_web_neo4j_password}}
+      - NEO4J_dbms_memory_heap_maxSize=4G
+    volumes:
+      - /minio/neo4j/data/neo4j-data:/data
+      - /minio/neo4j/plugins:/plugins
+  api:
+    image: docker..com/internal/hume-api:{{kg_hume_version}}
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hume
+      - SPRING_DATASOURCE_USERNAME=hume
+      - SPRING_DATASOURCE_PASSWORD=password123
+      - NEO4J_HOST=neo4j
+      - NEO4J_PASSWORD={{kg_hume_cloud_web_neo4j_password}}
+      - HUME_GATEWAY_URI=https://user:password@gateway.dev.hume..com
+      - HUME_KG_MULTIGRAPH=false
+      - HUME_BLOBSTORE_ADAPTER=minio
+      - HUME_BLOBSTORE_ADAPTER_S3_HOST=https://minio.kg.demo..com
+      - HUME_BLOBSTORE_ADAPTER_S3_IDENTITY={{kg_hume_cloud_web_minio_access_key}}
+      - HUME_BLOBSTORE_ADAPTER_S3_CREDENTIAL={{kg_hume_cloud_web_minio_access_secret}}
+      - HUME_BLOBSTORE_CONTAINER=kg-hume-files
+      - HUME_KG_NLP_ENABLED=true
+      - "COM_HUME_CORE_SECURITY_LICENSE_B64={{kg_hume_cloud_web_license_key}}"
+      - LOGGING_LEVEL_COM_HUME_CORE_NEO4J=DEBUG
+      - SECURITY_SIGNUP_ENABLED=false
+    depends_on:
+      - postgres
+  web:
+    image: docker..com/internal/hume-web:{{kg_hume_version}}
+    restart: always
+    environment:
+      - HUME_API_URL=https://api.kg.demo..com
+networks:
+  default:
+    external:
+      name: reverse_proxy

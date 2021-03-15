@@ -1,0 +1,3 @@
+---
+pritunl_version: 1.29.2468.79
+pritunl_local_path: '/docker/pritunl'

@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  annotation_service:
+    image: docker..com/internal/textrank-service:{{hume_cloud_textrank_service_tag}}
+    environment:
+      - SERVER_PORT=8086
+      - EUREKA_URI=http://{{ansible_host}}:8761/eureka
+      - HUME_CLOUD_ENABLED=true
+      - server.tomcat.max-connections=100
+      - "JAVA_OPTS=-Xmx2g -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"

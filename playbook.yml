@@ -1,0 +1,221 @@
+- hosts: tag_role_common_enabled
+  gather_facts: yes
+  gather_subset:
+    - hardware
+  roles:
+    - { role: ebs_mapping, tags: ebs_mapping }
+    - { role: yum, tags: yum }
+    - { role: selinux_policy, tags: selinux_policy }
+    - { role: utils, tags: utils }
+    - { role: swap, tags: swap }
+    - { role: hostname, tags: hostname }
+
+- hosts: tag_role_users_enabled
+  roles:
+    - { role: users, tags: users }
+
+- hosts: tag_role_docker_disk_enabled
+  tags:
+    - docker_disk
+  roles:
+    - role: data_disk
+      data_disk_device_group_prefix: docker_disk_device_name
+      data_disk_mount_path: /docker
+      data_disk_default_device_name: nvme1n1
+
+- hosts: tag_role_docker_enabled
+  roles:
+    - { role: docker, tags: docker }
+
+- hosts: tag_role_reverse_proxy_enabled
+  roles:
+    - { role: reverse_proxy, tags: reverse_proxy }
+
+- hosts: tag_role_certbot_enabled
+  roles:
+    - { role: certbot, tags: certbot }
+
+- hosts: tag_role_wireguard_enabled
+  roles:
+    - { role: wireguard, tags: wireguard }
+
+- hosts: tag_role_neo4j_enabled
+  roles:
+    - { role: neo4j, tags: neo4j }
+
+- hosts: tag_role_gitlab_runner_enabled
+  roles:
+    - { role: gitlab_runner, tags: gitlab_runner }
+
+- hosts: tag_role_echo_enabled
+  roles:
+    - { role: echo, tags: echo }
+
+- hosts: tag_role_ci_cd_example_enabled
+  roles:
+    - { role: ci_cd_example, tags: ci_cd_example }
+
+- hosts: tag_role_node21_enabled
+  roles:
+    - { role: node21, tags: node21 }
+
+- hosts: tag_role_truck_system_enabled
+  roles:
+    - { role: truck_system, tags: truck_system }
+
+- hosts: tag_role_timesheet_kitten_enabled
+  roles:
+    - { role: timesheet_kitten, tags: timesheet_kitten }
+
+- hosts: tag_role_hume_web_enabled
+  roles:
+    - { role: hume_web, tags: hume_web }
+
+- hosts: tag_role_hume_app_enabled
+  roles:
+    - { role: hume_app, tags: hume_app }
+
+- hosts: tag_role_minio_disk_enabled
+  tags:
+    - docker_disk
+  roles:
+    - role: data_disk
+      data_disk_device_group_prefix: minio_disk_device_name
+      data_disk_mount_path: /minio
+      data_disk_default_device_name: sdc
+  
+- hosts: tag_role_minio_enabled
+  roles:
+    - { role: minio, tags: minio }
+
+- hosts: tag_role_elastic_enabled
+  roles:
+    - { role: elastic, tags: elastic }
+
+- hosts: tag_role_hume_cloud_discovery_enabled
+  roles:
+    - { role: hume_cloud_discovery, tags: hume_cloud_discovery }
+
+- hosts: tag_role_hume_cloud_gateway_enabled
+  roles:
+    - { role: hume_cloud_gateway, tags: hume_cloud_gateway }
+
+- hosts: tag_role_hume_cloud_annotation_service_enabled
+  roles:
+    - { role: hume_cloud_annotation_service, tags: hume_cloud_annotation_service }
+
+- hosts: tag_role_hume_prod_annotation_service_enabled
+  roles:
+    - { role: hume_prod_annotation_service, tags: hume_prod_annotation_service }
+
+- hosts: tag_role_hume_cloud_textrank_service_enabled
+  roles:
+    - { role: hume_cloud_textrank_service, tags: hume_cloud_textrank_service }
+
+- hosts: tag_role_hume_cloud_monitoring_enabled
+  roles:
+    - { role: hume_cloud_monitoring, tags: hume_cloud_monitoring }
+
+- hosts: tag_role_hume_cloud_web_enabled
+  roles:
+    - { role: hume_cloud_web, tags: hume_cloud_web }
+  
+- hosts: tag_role_hume_cloud_spotlight_enabled
+  roles:
+    - { role: hume_cloud_spotlight, tags: hume_cloud_spotlight }
+
+- hosts: tag_role_nexus_enabled
+  roles:
+    - { role: nexus, tags: nexus }
+
+- hosts: tag_role_hume_labs_nlp_enabled
+  roles:
+    - { role: hume_labs_nlp, tags: hume_labs_nlp }
+
+- hosts: tag_role_hume_documentation_enabled
+  roles:
+    - { role: hume_documentation, tags: hume_documentation }
+
+- hosts: tag_role_dzd_nlp_engine_enabled
+  roles:
+    - { role: dzd_nlp_engine, tags: dzd_nlp_engine }
+
+- hosts: tag_role_harbor_enabled
+  roles:
+    - { role: harbor, tags: harbor }
+
+- hosts: tag_role_sonarqube_enabled
+  roles:
+    - { role: sonarqube, tags: sonarqube }
+
+- hosts: tag_role_traction_bot_enabled
+  roles:
+    - { role: traction_bot, tags: traction_bot }
+
+- hosts: tag_role_kg_cloud_enabled
+  roles:
+    - { role: kg_cloud, tags: kg_cloud }
+
+- hosts: tag_role_homedepot_enabled
+  roles:
+    - { role: homedepot, tags: homedepot }
+
+- hosts: tag_role_hume_tcs_enabled
+  roles:
+    - { role: hume_tcs, tags: hume_tcs }
+
+- hosts: tag_role_hume_prod_enabled
+  roles:
+    - { role: hume_prod, tags: hume_prod }
+  
+- hosts: tag_role_hume_prod_demo_enabled
+  roles:
+    - { role: hume_prod_demo, tags: hume_prod_demo }
+
+- hosts: tag_role_hume_review_orchestra_enabled
+  roles:
+    - { role: hume_review_orchestra, tags: hume_review_orchestra }
+  
+- hosts: tag_role_hume_softlink_enabled
+  roles:
+    - { role: hume_softlink, tags: hume_softlink }
+
+- hosts: tag_role_hume_corona_enabled
+  roles:
+    - { role: hume_corona, tags: hume_corona }
+
+- hosts: tag_role_hume_trojan_enabled
+  roles:
+    - { role: hume_trojan, tags: hume_trojan }
+
+- hosts: tag_role_hume_afp_enabled
+  roles:
+    - { role: hume_afp, tags: hume_afp }
+
+- hosts: tag_role_hume_dev_afp_enabled
+  roles:
+    - { role: hume_dev_afp, tags: hume_dev_afp }
+
+- hosts: tag_role_hume_datascience_enabled
+  roles:
+    - { role: hume_datascience, tags: hume_datascience }
+
+- hosts: tag_role_hume_covid_enabled
+  roles:
+    - { role: hume_covid, tags: hume_covid }
+
+- hosts: tag_role_website_products_enabled
+  roles:
+    - { role: website_products, tags: website_products }
+
+- hosts: tag_role_pritunl_enabled
+  roles:
+    - { role: pritunl, tags: pritunl }
+
+- hosts: tag_role_hume_testgame_enabled
+  roles:
+    - { role: hume_testgame, tags: hume_testgame }
+
+- hosts: tag_role_web_nginx_enabled
+  roles:
+    - { role: web_nginx, tags: web_nginx }

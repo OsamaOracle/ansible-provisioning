@@ -1,0 +1,94 @@
+---
+
+- name: Install repo
+  yum:
+    name:
+      - elrepo-release
+    update_cache: yes
+
+- name: Install repo plugin
+  yum:
+    name:
+      - yum-plugin-elrepo
+    update_cache: yes
+
+- name: Install packages
+  yum:
+    name:
+      - firewalld
+      - kmod-wireguard
+      - wireguard-tools
+    update_cache: yes
+
+- name: firewalld config
+  template:
+    src: wireguard.xml.j2
+    dest: /etc/firewalld/services/wireguard.xml
+
+- name: enable firewalld service
+  service:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: enable wireguard
+  firewalld:
+    zone: public
+    service: wireguard
+    permanent: yes
+    state: enabled
+  register: _enable_wireguard_result
+
+- name: enable masquerade
+  firewalld:
+    masquerade: yes
+    state: enabled
+    permanent: yes
+    zone: public
+  register: _enable_masquerade_result
+
+- name: enable firewalld service
+  service:
+    name: firewalld
+    state: reloaded
+    enabled: yes
+  when: _enable_masquerade_result.changed or _enable_wireguard_result.changed
+
+- name: set ipv4_forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: secret file
+  ansible.builtin.copy:
+    content: "{{ wireguard_private_key }}"
+    dest: /etc/wireguard/wg0.key
+    mode: 0400
+    owner: root
+    group: root
+  register: _secret_file_result
+
+- name: config file
+  template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    mode: 0600
+    owner: root
+    group: root
+  register: _config_file_result
+
+- name: restart service
+  service:
+    name: wg-quick@wg0
+    state: restarted
+    enabled: yes
+  when: _config_file_result.changed or _secret_file_result.changed
+
+- name: enable service
+  service:
+    name: wg-quick@wg0
+    state: started
+    enabled: yes

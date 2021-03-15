@@ -1,0 +1,148 @@
+---
+
+- name: create role docker directory
+  file:
+    path: /docker/node21
+    state: directory
+    mode: 0755
+
+- name: create data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - /docker/node21/neo4j-data
+    - /docker/node21/neo4j-plugins
+    - /backup
+    - /backup/node21
+    - /backup/node21/neo4j
+
+- set_fact:
+    restart_docker: no
+
+- name: Add plugins from urls
+  get_url:
+    url: "{{ item.value.url }}"
+    dest: /docker/node21/neo4j-plugins/{{ item.key }}.jar
+    force: yes
+  loop: "{{ node21_neo4j_plugins | dict2items }}"
+  when: item.value.url is defined
+  register: add_plugins_from_url_result
+  loop_control:
+    label: "key: {{ item.key }}, url: {{ item.value.url }}"
+
+- set_fact:
+    restart_docker: "{{ restart_docker or add_plugins_from_url_result.changed }}"
+
+- name: Find currently installed plugins
+  find:
+    path: /docker/node21/neo4j-plugins/
+  register: current_plugins
+
+- name: Remove unmanaged plugins
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ current_plugins.files }}"
+  when: (item.path | basename)[:-4] not in ( node21_neo4j_plugins | list )
+  register: remove_extra_plugins_result
+  loop_control:
+    label: "{{ item.path }}"
+
+- set_fact:
+    restart_docker: "{{ restart_docker or remove_extra_plugins_result.changed }}"
+
+- name: create docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: /docker/node21/docker-compose.yml
+    mode: 0660
+    owner: root
+    group: wheel
+
+- name: Log into  registry
+  docker_login:
+    registry: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  changed_when: False
+  register: result
+
+- debug: var=result
+
+- name: run service
+  docker_compose:
+    project_src: /docker/node21/
+    pull: yes
+    restarted: "{{ restart_docker }}"
+  register: run_service_result
+
+- name: set local ip address to services
+  set_fact:
+    service_container_ip:
+      frontend: "{{ run_service_result.services['node21-frontend']['node21_node21-frontend_1'].networks.reverse_proxy.IPAddress }}"
+      backend: "{{ run_service_result.services['node21-backend']['node21_node21-backend_1'].networks.reverse_proxy.IPAddress }}"
+      neo4j: "{{ run_service_result.services['node21-neo4j']['node21_node21-neo4j_1'].networks.node21_neo4j.IPAddress }}"
+
+- name: Wait for neo4j up and running
+  uri:
+    url: "http://{{ service_container_ip.neo4j }}:7474/"
+    status: 200
+  register: result
+  until: result.status == 200
+  retries: 60
+  delay: 5
+  check_mode: no
+
+- name: Check if default neo4j password needs to be changed
+  uri:
+    url: "http://{{ service_container_ip.neo4j }}:7474/db/manage/server/version"
+    user: neo4j
+    password: neo4j
+    force_basic_auth: yes
+    status_code:
+    - 200
+    - 401
+    - 403
+  register: neo4j_password_check_response
+  check_mode: no
+
+- debug: var=neo4j_password_check_response.json.errors
+
+- name: Change neo4j password
+  uri:
+    method: POST
+    url: "http://{{ service_container_ip.neo4j }}:7474/user/neo4j/password"
+    user: neo4j
+    password: neo4j
+    force_basic_auth: yes
+    body: '{"password":"{{ node21_neo4j_password }}"}'
+    body_format: json
+  when: neo4j_password_check_response.json.errors[0].message == "User is required to change their password."
+
+- name: register to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "{{ node21_env }}.node21.service..com"
+    endpoints:
+      "/": "http://{{ service_container_ip.frontend }}:3000"
+      "/api/":
+        destination: "http://{{ service_container_ip.backend }}:4001"
+        rewrite: true
+
+- name: register extra url to reverse proxy
+  include_role:
+    name: reverse_proxy_record
+  vars:
+    server_name: "{{ node_21_extra_url_per_env[node21_env] }}"
+    endpoints:
+      "/": "http://{{ service_container_ip.frontend }}:3000"
+      "/api/":
+        destination: "http://{{ service_container_ip.backend }}:4001"
+        rewrite: true
+  when: node21_env in node_21_extra_url_per_env
+
+
+

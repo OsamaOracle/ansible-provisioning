@@ -1,0 +1,16 @@
+version: "3.7"
+services:
+  annotation_service:
+    image: docker..com/internal/annotation-service:{{hume_cloud_annotation_service_tag}}
+    ports:
+     - "8085:8085"
+    environment:
+      - SERVER_PORT=8085
+      - EUREKA_URI=http://{{ansible_host}}:8761/eureka
+      - HUME_CLOUD_ENABLED=true
+      - server.tomcat.max-connections=2
+      - "JAVA_OPTS=-Xmx4g"
+      - hume.config.store.driver=blobstore
+      - HUME_CONFIG_STORE_HOST=https://minio.dev.hume..com
+      - HUME_CONFIG_STORE_ACCESS_KEY={{hume_cloud_web_minio_access_key}}
+      - HUME_CONFIG_STORE_ACCESS_SECRET={{hume_cloud_web_minio_access_secret}}

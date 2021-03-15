@@ -1,0 +1,15 @@
+version: '3.7'
+services:
+  nginx:
+    image: nginx:1.17-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /docker/reverse_proxy/nginx.conf.d:/etc/nginx/conf.d
+      - /docker/reverse_proxy/certbot/conf:/etc/letsencrypt
+      - /docker/reverse_proxy/certbot/www:/var/www/certbot
+
+networks:
+  default:
+    name: reverse_proxy

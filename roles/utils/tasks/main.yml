@@ -1,0 +1,17 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+    - screen
+    - dstat
+    - vim
+    - python-pip
+    - jq
+    - telnet
+    state: present
+    update_cache: yes
+
+- name: Upgrade pip
+  pip:
+    name: pip>9.0.0,<21.0.0
